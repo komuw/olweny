@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 func walkFnClosure(path string) filepath.WalkFunc {
@@ -13,18 +14,18 @@ func walkFnClosure(path string) filepath.WalkFunc {
 		if err != nil {
 			return err
 		}
-		fileToCheck := filepath.Join(path, "done.txt")
-		fileToCheck, _ = filepath.Abs(fileToCheck)
-		_, err = os.Stat(fileToCheck)
-		if err == nil {
-			log.Println("file EXISTS so we return")
-			return err
+		if info.IsDir() {
+			return nil
 		}
-		// file NOT EXISTS, so convert
-		if !info.IsDir() {
-			fileToConvert := path
-			convert(fileToConvert)
+
+		if strings.Contains(path, "converted-480") {
+			log.Printf("\n\n\t already converted %s, exiting:: ", path)
+			return nil
 		}
+
+		//convert
+		fileToConvert := path
+		convert(fileToConvert)
 
 		return nil
 	}
@@ -32,7 +33,7 @@ func walkFnClosure(path string) filepath.WalkFunc {
 
 func convert(filename string) {
 	log.Println("\n\n\t converting:: ", filename)
-	cmd := exec.Command("ffmpeg", "-y", "-i", filename, "-vf", "scale=640:480", "-movflags", "+faststart", "-tune", "zerolatency", "-crf", "23", "-maxrate", "600k", "-bufsize", "600k", filename+"-480"+".mp4")
+	cmd := exec.Command("ffmpeg", "-y", "-i", filename, "-vf", "scale=640:480", "-movflags", "+faststart", "-tune", "zerolatency", "-crf", "23", "-maxrate", "600k", "-bufsize", "600k", filename+"-converted-480"+".mp4")
 	// cmd.Stdin = strings.NewReader("some input")
 	// var out bytes.Buffer
 	cmd.Stdout = os.Stdout
@@ -42,8 +43,6 @@ func convert(filename string) {
 		log.Printf("\n\n\t conversion of %s failed. err=%v", filename, err)
 	}
 	log.Printf("\n\n\t conversion of %s succeded:: ", filename)
-
-	// create done.txt file
 
 	// delete old file
 	deleteFile(filename)
